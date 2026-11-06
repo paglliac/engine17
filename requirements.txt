@@ -3,3 +3,4 @@ starlette==1.10.0
 uvicorn==0.54.0
 python-multipart==0.0.20
 httpx==0.28.1
+exchangelib==5.6.0
