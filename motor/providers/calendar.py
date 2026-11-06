@@ -234,7 +234,8 @@ def day(date: str | None = None, to: str | None = None, attendee: str = "", limi
     (не меняется при переносе), id. Пустой список — правда свободный день: календарь читается живьём.
 
     date — ГГГГ-ММ-ДД, по умолчанию сегодня; to — последний день диапазона (до 62 дней);
-    attendee — часть почты или имени участника/организатора («ivanov», «Иванов»)."""
+    attendee — часть почты или имени участника/организатора, латиницей: имена в Exchange
+    обычно английские («golish», «Maksim»)."""
     first = _date(date, "date") or _today()
     last = _date(to, "to") or first
     if last < first:
@@ -248,8 +249,8 @@ def day(date: str | None = None, to: str | None = None, attendee: str = "", limi
 @calendar.action
 def upcoming(days: int = 7, attendee: str = "", limit: int = 30) -> dict:
     """Встречи, которые ещё не закончились, ближайшие первыми — за `days` дней вперёд, считая
-    сегодня (до 62). attendee — часть почты или имени, например чтобы найти следующую 1-1 с
-    человеком. Форма встречи — как у `day`."""
+    сегодня (до 62). attendee — часть почты или имени латиницей, например чтобы найти
+    следующую 1-1 с человеком. Форма встречи — как у `day`."""
     if not 1 <= days <= MAX_DAYS:
         raise BadRequest(f"days: от 1 до {MAX_DAYS}")
     now = _now()
