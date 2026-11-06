@@ -10,7 +10,11 @@
 
 ## Стек
 
-Не выбран — решается в К1. Почти всё, что переносится, на Python: хаб (Starlette/uvicorn), клиент Mattermost (`requests`), календарь (`exchangelib`), ktalk, `~/mcp/*` (пакет `fastmcp`, не официальный `mcp` SDK). infra умеет `runtime: python` и `node`.
+Python 3.13 (на сервере), Starlette + uvicorn, MCP — официальный `mcp` SDK 2.x (stateless, ответы JSON), база — SQLite `data/motor.db`. Выбрано в К1: всё, что переносится, на Python, а SDK сам держит обе версии протокола MCP на одном адресе.
+
+- `motor/provider.py` — механизм: `Provider` + `@p.action` → `GET /<поставщик>/<действие>` и инструмент MCP на `/<поставщик>`. Как писать поставщика — в шапке файла; пример — `motor/providers/motor.py`, список — `motor/providers/__init__.py`.
+- `motor/errors.py` — ошибки с кодом и текстом «что делать»; `motor/store.py` — потребители, внешние токены, состояние поставщиков; `motor/page.py` — страничка.
+- `make venv`, `make test`, `make run` (локально на `:4319`), `make hash-password` (строка для `MOTOR_PASSWORD_HASH`).
 
 ## Деплой — через `infra`
 
