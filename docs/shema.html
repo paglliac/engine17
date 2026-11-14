@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Схема мотора</title>
+<style>
+  :root {
+    --bg: #fafaf9; --fg: #1c1917; --muted: #78716c;
+    --box: #ffffff; --border: #d6d3d1; --line: #a8a29e;
+    --accent: #2563eb; --accent-bg: #eff6ff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1917; --fg: #f5f5f4; --muted: #a8a29e;
+      --box: #292524; --border: #44403c; --line: #78716c;
+      --accent: #60a5fa; --accent-bg: #172554;
+    }
+  }
+  body {
+    margin: 0; padding: 32px 16px; background: var(--bg); color: var(--fg);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 920px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  p { color: var(--muted); margin: 0 0 24px; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { fill: var(--fg); font-size: 14px; text-anchor: middle; }
+  svg .muted { fill: var(--muted); font-size: 12px; }
+  svg .title { font-weight: 600; font-size: 16px; }
+  svg .box { fill: var(--box); stroke: var(--border); stroke-width: 1; }
+  svg .motor { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 1.5; }
+  svg .edge { stroke: var(--line); stroke-width: 1.25; fill: none; }
+  svg .arrow { fill: var(--line); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Мотор поставщиков</h1>
+  <p>Все ходят к внешним системам через одну программу на gang.su. Токены хранятся только в ней.</p>
+
+  <svg viewBox="0 0 900 450" role="img" aria-label="Схема: потребители → motor.gang.su → поставщики">
+    <defs>
+      <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path class="arrow" d="M0,0 L10,5 L0,10 z"/>
+      </marker>
+    </defs>
+
+    <!-- потребители -->
+    <rect class="box" x="60"  y="20" width="220" height="56" rx="8"/>
+    <text x="170" y="44">Claude на маке</text>
+    <text class="muted" x="170" y="63">плагин «мотор»</text>
+
+    <rect class="box" x="340" y="20" width="220" height="56" rx="8"/>
+    <text x="450" y="44">claude -p на сервере</text>
+    <text class="muted" x="450" y="63">/etc/motor/mcp.json</text>
+
+    <rect class="box" x="620" y="20" width="220" height="56" rx="8"/>
+    <text x="730" y="44">recaps, хаб</text>
+    <text class="muted" x="730" y="63">сами ходят по адресам</text>
+
+    <path class="edge" d="M170,76 L390,173" marker-end="url(#a)"/>
+    <path class="edge" d="M450,76 L450,173" marker-end="url(#a)"/>
+    <path class="edge" d="M730,76 L510,173" marker-end="url(#a)"/>
+    <text class="muted" x="262" y="120">MCP</text>
+    <text class="muted" x="474" y="128">MCP</text>
+    <text class="muted" x="660" y="120">GET → JSON</text>
+
+    <!-- мотор -->
+    <rect class="motor" x="290" y="175" width="320" height="80" rx="10"/>
+    <text class="title" x="450" y="204">motor.gang.su</text>
+    <text class="muted" x="450" y="225">у каждого потребителя свой токен</text>
+    <text class="muted" x="450" y="243">хранит только токены, данных нет</text>
+
+    <!-- страничка -->
+    <rect class="box" x="20" y="189" width="210" height="52" rx="8"/>
+    <text x="125" y="211">страничка (пароль)</text>
+    <text class="muted" x="125" y="229">токены · код VPN · потребители</text>
+    <path class="edge" d="M230,215 L287,215" marker-end="url(#a)"/>
+
+    <!-- поставщики -->
+    <path class="edge" d="M450,255 L98,337"  marker-end="url(#a)"/>
+    <path class="edge" d="M450,255 L274,337" marker-end="url(#a)"/>
+    <path class="edge" d="M450,255 L450,337" marker-end="url(#a)"/>
+    <path class="edge" d="M450,255 L626,337" marker-end="url(#a)"/>
+    <path class="edge" d="M450,255 L802,337" marker-end="url(#a)"/>
+
+    <rect class="box" x="20"  y="340" width="156" height="60" rx="8"/>
+    <text x="98" y="365">Mattermost</text>
+    <text x="98" y="385">Todoist</text>
+    <text class="muted" x="98" y="425">напрямую</text>
+
+    <rect class="box" x="196" y="340" width="156" height="60" rx="8"/>
+    <text x="274" y="365">календарь</text>
+    <text x="274" y="385">ktalk</text>
+    <text class="muted" x="274" y="425">мимо NL-туннеля</text>
+
+    <rect class="box" x="372" y="340" width="156" height="60" rx="8"/>
+    <text x="450" y="365">Confluence</text>
+    <text x="450" y="385">Jira</text>
+    <text class="muted" x="450" y="425">через VPN Авито</text>
+
+    <rect class="box" x="548" y="340" width="156" height="60" rx="8"/>
+    <text x="626" y="375">оргструктура</text>
+    <text class="muted" x="626" y="425">VPN? проверить</text>
+
+    <rect class="box" x="724" y="340" width="156" height="60" rx="8"/>
+    <text x="802" y="365">хаб</text>
+    <text class="muted" x="802" y="385">tracker, people, inbox…</text>
+    <text class="muted" x="802" y="425">HTTP хаба</text>
+  </svg>
+
+  <p style="margin-top:24px">Хаб есть и сверху, и снизу: он берёт данные через мотор и сам отдаёт свои. Подробности — в <code>motor.md</code>.</p>
+</main>
+</body>
+</html>
