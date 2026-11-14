@@ -26,7 +26,8 @@ from ..provider import Provider, Secret
 API = os.environ.get("MOTOR_GCAL_URL", "https://www.googleapis.com/calendar/v3").rstrip("/")
 TZ = ZoneInfo(os.environ.get("MOTOR_TZ", "Europe/Moscow"))
 TIMEOUT = 30
-SCOPE = "https://www.googleapis.com/auth/calendar.events"
+# Events to read and write; the calendar itself (name, zone — `status`) only to read.
+SCOPES = ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.readonly"]
 MAX_DAYS = 366
 DEFAULT_MINUTES = 60
 
@@ -73,7 +74,7 @@ def _token() -> str:
                 info = json.loads(raw)
                 from google.oauth2 import service_account
 
-                creds = service_account.Credentials.from_service_account_info(info, scopes=[SCOPE])
+                creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
             except (ValueError, KeyError) as exc:
                 raise family.expired("ключ не похож на JSON служебной учётки Google — вставь файл ключа "
                                      "целиком на motor.gang.su") from exc
