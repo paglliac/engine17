@@ -114,7 +114,7 @@
 | П7 | Оргструктура | К1 | | |
 | П8 | Todoist | К1 | claude 14.11 | готово 14.11 |
 | П9 | Хаб как поставщик | К1 | claude 14.11 | готово 14.11 |
-| П10 | Личный (семейный) календарь Google | К1 | claude 14.11 | |
+| П10 | Личный (семейный) календарь Google | К1 | claude 14.11 | готово 14.11 |
 
 Приоритет: П1, П2 → П3, П4, П5 → П6, П7, П8 → П9.
 
@@ -181,6 +181,7 @@
 - [Х4] — убраны `tracker_global`, `inbox_global`, `triage_global`, `people_global`, `ktalk_global`, `calendar_global` (файлы в `~/mcp/secondbrain` на месте). Загрузку расшифровок в хаб решили не переносить; кэш расшифровок — потом, если понадобится. Поправлены по имени: скилл `weekly-review` (теперь «MCP мотора + `confluence_global`») и `personal-review/AGENTS.md` (список расшифровок — `GET /api/transcripts/` хаба через `sb_client.py`). В `~/SecondBrain/.mcp.json` серверов хаба уже не было, там только Confluence — это Х3.
 - [П8] — действия `todoist`: `status`, `projects`, `tasks` (по умолчанию «Входящие», объекты Todoist целиком, листание до `limit`), `delete_task`. Todoist отвечает 204 и на уже удалённую задачу — «была ли» не узнать. Для Х10: хаб листал только первую страницу «Входящих».
 - [П8] — 14.11 добавлен `add_task` (срок словами `due_string`, по умолчанию во «Входящие»). Вычитку Todoist в инбоксе хаба пользователь отключил — для Х10 переключать нечего, осталось убрать код коллектора и `TODOIST_API_TOKEN` из хаба.
+- [П10] — действия `family`: `status`, `day`, `upcoming` (с `query`), `create_event`, `update_event` (перенос сохраняет длительность), `delete_event`. Вход — служебная учётка `motor-839@…` (ключ выпущен после снятия `iam.disableServiceAccountKeyCreation` для проекта), права `calendar.events` + `calendar.readonly`. Время — в поясе самого календаря (сейчас Asia/Krasnoyarsk), не Москвы; рабочий `calendar` — по Москве. Приглашения не рассылаются (`sendUpdates=none`).
 
 ## Не входит
 
