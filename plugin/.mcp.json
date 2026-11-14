@@ -20,6 +20,11 @@
       "url": "${MOTOR_URL:-https://motor.gang.su}/ktalk",
       "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
     },
+    "todoist": {
+      "type": "http",
+      "url": "${MOTOR_URL:-https://motor.gang.su}/todoist",
+      "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
+    },
     "tracker": {
       "type": "http",
       "url": "${MOTOR_URL:-https://motor.gang.su}/tracker",
