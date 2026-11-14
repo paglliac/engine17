@@ -5,8 +5,8 @@
 приглашений участникам служебная учётка не рассылает (и не пытается: `sendUpdates=none`).
 
 Google Calendar API v3 по REST через httpx; токен доступа выпускает `google-auth` из ключа и сам
-обновляет его, когда истёк. Время — Москва (как у `calendar`); встречи на весь день — даты, `end`
-включительно.
+обновляет его, когда истёк. Время — в поясе самого календаря (из его настроек в Google), чтобы «в 18:00»
+значило то же, что видно в календаре; встречи на весь день — даты, `end` включительно.
 """
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ import datetime
 import json
 import os
 import threading
+import time
 from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -24,7 +25,9 @@ from ..errors import BadRequest, NotFound
 from ..provider import Provider, Secret
 
 API = os.environ.get("MOTOR_GCAL_URL", "https://www.googleapis.com/calendar/v3").rstrip("/")
-TZ = ZoneInfo(os.environ.get("MOTOR_TZ", "Europe/Moscow"))
+# The calendar's own zone (its Google settings), re-read hourly; this one only if Google gives none.
+FALLBACK_TZ = "Europe/Moscow"
+TZ_TTL = 3600
 TIMEOUT = 30
 # Events to read and write; the calendar itself (name, zone — `status`) only to read.
 SCOPES = ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.readonly"]
@@ -45,7 +48,7 @@ family = Provider(
     writes=True,
     instructions=(
         "Семейный Google-календарь (общий с женой): встречи за день или диапазон, ближайшие, поиск по "
-        "тексту; создать, изменить или перенести, удалить встречу. Время — Москва. Удаление необратимо — "
+        "тексту; создать, изменить или перенести, удалить встречу. Время — в поясе календаря (status его называет). Удаление необратимо — "
         "только по прямой просьбе."
     ),
     secrets=[
@@ -156,6 +159,23 @@ def _calendar_info() -> dict:
     return _json(resp, "календарь")
 
 
+_zone: tuple[str, float, ZoneInfo] | None = None  # (calendar id, when read, zone)
+
+
+def _tz() -> ZoneInfo:
+    """The calendar's own time zone — what the family sees in Google."""
+    global _zone
+    cal = family.secret("calendar").strip()
+    if _zone is None or _zone[0] != cal or time.monotonic() - _zone[1] > TZ_TTL:
+        name = _calendar_info().get("timeZone") or FALLBACK_TZ
+        try:
+            zone = ZoneInfo(name)
+        except (KeyError, ValueError):
+            zone = ZoneInfo(FALLBACK_TZ)
+        _zone = (cal, time.monotonic(), zone)
+    return _zone[2]
+
+
 # ── форма ────────────────────────────────────────────────────────────────────
 
 def _when(value: dict | None) -> tuple[str, bool]:
@@ -166,7 +186,7 @@ def _when(value: dict | None) -> tuple[str, bool]:
     raw = value.get("dateTime") or ""
     if not raw:
         return "", False
-    return datetime.datetime.fromisoformat(raw).astimezone(TZ).isoformat(timespec="minutes"), False
+    return datetime.datetime.fromisoformat(raw).astimezone(_tz()).isoformat(timespec="minutes"), False
 
 
 def _event(ev: dict) -> dict:
@@ -194,7 +214,7 @@ def _event(ev: dict) -> dict:
 # ── разбор ввода ─────────────────────────────────────────────────────────────
 
 def _today() -> datetime.date:
-    return datetime.datetime.now(TZ).date()
+    return datetime.datetime.now(_tz()).date()
 
 
 def _date(value: str, name: str) -> datetime.date:
@@ -213,7 +233,7 @@ def _moment(value: str, name: str) -> datetime.date | datetime.datetime:
         moment = datetime.datetime.fromisoformat(value)
     except ValueError as exc:
         raise BadRequest(f"{name}: ГГГГ-ММ-ДД (на весь день) или ГГГГ-ММ-ДДTЧЧ:ММ, а не {value!r}") from exc
-    return moment if moment.tzinfo else moment.replace(tzinfo=TZ)
+    return moment if moment.tzinfo else moment.replace(tzinfo=_tz())
 
 
 def _google_times(start: str, end: str) -> tuple[dict, dict]:
@@ -224,8 +244,8 @@ def _google_times(start: str, end: str) -> tuple[dict, dict]:
             raise BadRequest("end: у встречи со временем конец тоже со временем, ГГГГ-ММ-ДДTЧЧ:ММ")
         if finish <= begin:
             raise BadRequest("end раньше start")
-        return ({"dateTime": begin.isoformat(), "timeZone": TZ.key},
-                {"dateTime": finish.isoformat(), "timeZone": TZ.key})
+        return ({"dateTime": begin.isoformat(), "timeZone": _tz().key},
+                {"dateTime": finish.isoformat(), "timeZone": _tz().key})
     last = _moment(end, "end") if end else begin
     if isinstance(last, datetime.datetime):
         raise BadRequest("end: у встречи на весь день конец — тоже дата, ГГГГ-ММ-ДД (включительно)")
@@ -238,7 +258,7 @@ def _list(first: datetime.datetime, last: datetime.datetime, query: str, limit: 
     if limit < 1:
         raise BadRequest("limit: не меньше 1")
     params = {"timeMin": first.isoformat(), "timeMax": last.isoformat(), "singleEvents": "true",
-              "orderBy": "startTime", "maxResults": min(limit, 2500), "timeZone": TZ.key}
+              "orderBy": "startTime", "maxResults": min(limit, 2500), "timeZone": _tz().key}
     if query.strip():
         params["q"] = query.strip()
     data = _json(_request("GET", f"/calendars/{_cal()}/events", params=params), "календарь")
@@ -266,7 +286,7 @@ def status() -> dict:
 def day(date: str | None = None, to: str | None = None, query: str = "", limit: int = 30) -> dict:
     """Встречи семейного календаря за день или диапазон дат (включительно), по времени начала.
 
-    Встреча: id, title, start, end (ISO с поясом Москвы; у встреч на весь день — даты, end
+    Встреча: id, title, start, end (ISO в поясе календаря; у встреч на весь день — даты, end
     включительно), all_day, location, description, created_by, url; recurring: true у повторов
     (id повтора — одно это повторение).
 
@@ -277,8 +297,8 @@ def day(date: str | None = None, to: str | None = None, query: str = "", limit: 
         first, last = last, first
     if (last - first).days >= MAX_DAYS:
         raise BadRequest(f"диапазон не длиннее {MAX_DAYS} дней")
-    start = datetime.datetime.combine(first, datetime.time.min, TZ)
-    end = datetime.datetime.combine(last + datetime.timedelta(days=1), datetime.time.min, TZ)
+    start = datetime.datetime.combine(first, datetime.time.min, _tz())
+    end = datetime.datetime.combine(last + datetime.timedelta(days=1), datetime.time.min, _tz())
     events = _list(start, end, query, limit)
     return {"date": first.isoformat(), "to": last.isoformat(), "count": len(events), "events": events}
 
@@ -289,7 +309,7 @@ def upcoming(days: int = 14, query: str = "", limit: int = 30) -> dict:
     query — поиск по тексту («врач», «Маша»). Форма встречи — как у `day`."""
     if not 1 <= days <= MAX_DAYS:
         raise BadRequest(f"days: от 1 до {MAX_DAYS}")
-    now = datetime.datetime.now(TZ)
+    now = datetime.datetime.now(_tz())
     events = _list(now, now + datetime.timedelta(days=days), query, limit)
     return {"now": now.isoformat(timespec="minutes"), "count": len(events), "events": events}
 
@@ -298,7 +318,7 @@ def upcoming(days: int = 14, query: str = "", limit: int = 30) -> dict:
 def create_event(title: str, start: str, end: str = "", location: str = "", description: str = "") -> dict:
     """Создать встречу в семейном календаре. Её сразу видят все, у кого есть календарь.
 
-    start — ГГГГ-ММ-ДДTЧЧ:ММ (Москва, если без пояса) или ГГГГ-ММ-ДД — на весь день;
+    start — ГГГГ-ММ-ДДTЧЧ:ММ (в поясе календаря, если без пояса) или ГГГГ-ММ-ДД — на весь день;
     end — так же; по умолчанию: час для встречи со временем, тот же день для встречи на весь день
     (у дат end включительно). Возвращает созданную встречу (её id — для правки и удаления)."""
     if not title.strip():

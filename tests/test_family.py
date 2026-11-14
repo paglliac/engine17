@@ -31,6 +31,7 @@ class FakeGoogle:
         self.calls: list[tuple[str, str, dict, object]] = []
         self.status = 200
         self.error_reason = "forbidden"
+        self.zone = "Europe/Moscow"
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content) if request.content else None
@@ -43,7 +44,7 @@ class FakeGoogle:
                                                                "errors": [{"reason": self.error_reason}]}})
         base = f"/calendars/{CAL}"
         if path == base:
-            return httpx.Response(200, json={"summary": "Семья", "timeZone": "Europe/Moscow"})
+            return httpx.Response(200, json={"summary": "Семья", "timeZone": self.zone})
         if path == f"{base}/events" and request.method == "GET":
             items = sorted(self.events.values(), key=lambda e: json.dumps(e["start"]))
             return httpx.Response(200, json={"items": items})
@@ -71,6 +72,7 @@ def google(monkeypatch):
     fake = FakeGoogle()
     monkeypatch.setattr(fam, "transport", httpx.MockTransport(fake))
     monkeypatch.setattr(fam, "_token", lambda: "tok")
+    monkeypatch.setattr(fam, "_zone", None)
     return fake
 
 
@@ -136,8 +138,8 @@ def test_move_keeps_duration(client, google):
 
 def test_update_only_what_is_given(client, google):
     client.post("/family/update_event", json={"id": "e1", "title": "Стоматолог", "location": ""})
-    method, _, _, patch = google.calls[-1]
-    assert method == "PATCH" and patch == {"summary": "Стоматолог", "location": ""}
+    patches = [c[3] for c in google.calls if c[0] == "PATCH"]
+    assert patches == [{"summary": "Стоматолог", "location": ""}]
     assert client.post("/family/update_event", json={"id": "e1"}).status_code == 400
     assert client.post("/family/update_event", json={"id": "nope", "title": "x"}).status_code == 404
 
@@ -149,11 +151,10 @@ def test_delete_and_already_gone(client, google):
 
 
 def test_bad_times_are_400(client, google):
-    calls = len(google.calls)
     for body in ({"title": "x", "start": "завтра"}, {"title": "x", "start": "2026-11-25T19:00", "end": "2026-11-25T18:00"},
                  {"title": "x", "start": "2026-11-25", "end": "2026-11-25T18:00"}, {"title": " ", "start": "2026-11-25"}):
         assert client.post("/family/create_event", json=body).status_code == 400, body
-    assert len(google.calls) == calls
+    assert not [call for call in google.calls if call[0] != "GET"]  # nothing written
 
 
 def test_no_write_permission_is_explained(client, app, google):
@@ -170,3 +171,13 @@ def test_calendar_not_shared_is_explained(client, app, google):
     app.state.store.set_secret("family", "calendar", "other@group.calendar.google.com")
     response = client.get("/family/status")
     assert response.status_code == 401 and "расшарен" in response.json()["message"]
+
+
+def test_times_are_in_the_calendars_own_zone(client, google):
+    google.zone = "Asia/Krasnoyarsk"
+    doctor = next(e for e in client.get("/family/day?date=2026-11-20").json()["events"] if e["id"] == "e1")
+    assert doctor["start"] == "2026-11-20T22:00+07:00"  # 15:00Z, as the family sees it
+    assert google.calls[-1][2]["timeMin"] == "2026-11-20T00:00:00+07:00"
+    client.post("/family/create_event", json={"title": "Ужин", "start": "2026-11-25T18:00"})
+    assert google.calls[-1][3]["start"] == {"dateTime": "2026-11-25T18:00:00+07:00", "timeZone": "Asia/Krasnoyarsk"}
+    assert sum(1 for c in google.calls if c[1].endswith(".com")) == 1  # the zone is read once, then remembered
