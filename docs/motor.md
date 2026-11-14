@@ -137,7 +137,7 @@
 | Х1 | Мак: плагин мотора | К2 | claude 14.11 | готово 14.11 |
 | Х2 | Мак: Mattermost | П1, Х1 | claude 14.11 | готово 14.11 |
 | Х3 | Мак: Confluence | П4, Х1 | | |
-| Х4 | Мак: хаб и его MCP | П2, П6, П9, Х1 | claude 14.11 | |
+| Х4 | Мак: хаб и его MCP | П2, П6, П9, Х1 | claude 14.11 | готово 14.11 |
 | Х5 | Мак: старые копии ключей | Х2, Х3, Х4 | | |
 | Х6 | recaps | П1, К2 | | |
 | Х7 | Хаб: Mattermost | П1 | | |
@@ -175,6 +175,7 @@
 - [П9] — `tracker` (28: 25 оригинальных + повестки `get_agenda`, `add_agenda_item`, `set_agenda`), `people` (8), `inbox` (10), `triage` (6) — имена и тексты как в `~/SecondBrain-new/server/mcp`, без префикса `calendar_` у повесток. Токен хаба (`SB_API_TOKEN`) — одно поле «Трекер» на все четыре. `calendar` мотора отдаёт `key` в форме хаба — повестки находят встречу (проверено 9/9). Для Х4: скиллы, что зовут `mcp__tracker_global__*` и т. п. (weekly-review), после переключения зовут `mcp__plugin_motor_tracker__*` — поправить вместе с Х4. Ответ хаба мотор ждёт 55 с: долгий `inbox/process_now` может упереться.
 - [Х2] — `mattermost_global` звал ещё Screen Sprite (`~/assistant/mm-check/mm-check.sh`, `claude -p`): переведён на мотор — `--strict-mcp-config` + свой `--mcp-config` только с `…/mattermost`, токен из `~/.config/motor/token` (у приложения из Finder нет `~/.zshrc`). Касается Х4/Х5: так же искать скрипты и приложения, что зовут старые MCP по имени, а не только скиллы.
 - [П6] — действия `ktalk`: `status`, `recordings` (`since` или `days` до 90, `limit` 30), `transcript` (целиком, лента «[мм:сс] Имя: текст», `ready: false`, пока не распознано); вход — поле «Copy as cURL». Для Х4: старый `ktalk_global` (`list_transcripts`, `read_transcript`, `upload_transcript`) работает с копиями расшифровок в хабе и умеет загружать расшифровку в хаб — мотор этого не делает (читает ktalk живьём); до Х4 решить, нужна ли загрузка в хаб. Длина: 43 мин встречи ≈ 35 тыс. символов (~12k токенов) — встреча дольше ~1,5 ч может упереться в 25k токенов на ответ MCP.
+- [Х4] — убраны `tracker_global`, `inbox_global`, `triage_global`, `people_global`, `ktalk_global`, `calendar_global` (файлы в `~/mcp/secondbrain` на месте). Загрузку расшифровок в хаб решили не переносить; кэш расшифровок — потом, если понадобится. Поправлены по имени: скилл `weekly-review` (теперь «MCP мотора + `confluence_global`») и `personal-review/AGENTS.md` (список расшифровок — `GET /api/transcripts/` хаба через `sb_client.py`). В `~/SecondBrain/.mcp.json` серверов хаба уже не было, там только Confluence — это Х3.
 
 ## Не входит
 
