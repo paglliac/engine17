@@ -15,6 +15,11 @@
       "url": "${MOTOR_URL:-https://motor.gang.su}/calendar",
       "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
     },
+    "family": {
+      "type": "http",
+      "url": "${MOTOR_URL:-https://motor.gang.su}/family",
+      "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
+    },
     "ktalk": {
       "type": "http",
       "url": "${MOTOR_URL:-https://motor.gang.su}/ktalk",
