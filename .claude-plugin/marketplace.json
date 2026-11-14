@@ -1,0 +1,11 @@
+{
+  "name": "engine17",
+  "owner": {"name": "kir"},
+  "plugins": [
+    {
+      "name": "motor",
+      "source": "./plugin",
+      "description": "Поставщики мотора motor.gang.su (Mattermost, календарь, …) как MCP-серверы"
+    }
+  ]
+}

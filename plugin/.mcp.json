@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "motor": {
+      "type": "http",
+      "url": "${MOTOR_URL:-https://motor.gang.su}/motor",
+      "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
+    },
+    "mattermost": {
+      "type": "http",
+      "url": "${MOTOR_URL:-https://motor.gang.su}/mattermost",
+      "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
+    },
+    "calendar": {
+      "type": "http",
+      "url": "${MOTOR_URL:-https://motor.gang.su}/calendar",
+      "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
+    }
+  }
+}
