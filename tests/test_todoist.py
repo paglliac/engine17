@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 
 import httpx
 import pytest
@@ -23,6 +24,7 @@ class FakeTodoist:
         self.calls: list[tuple[str, str, dict]] = []
         self.auth = ""
         self.status = 200
+        self.added: list[dict] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         params = dict(request.url.params)
@@ -33,12 +35,18 @@ class FakeTodoist:
         path = request.url.path.removeprefix("/api/v1")
         if path == "/projects":
             return httpx.Response(200, json={"results": PROJECTS, "next_cursor": None})
-        if path == "/tasks":
+        if path == "/tasks" and request.method == "GET":
             items = self.tasks.get(params["project_id"], [])
             start = int(params.get("cursor", 0))
             end = start + int(params["limit"])
             return httpx.Response(200, json={"results": items[start:end],
                                              "next_cursor": str(end) if end < len(items) else None})
+        if request.method == "POST" and path == "/tasks":
+            body = json.loads(request.content)
+            self.added.append(body)
+            task = {"id": "n1", "project_id": body.get("project_id", "p0"), **body}
+            self.tasks.setdefault(task["project_id"], []).append(task)
+            return httpx.Response(200, json=task)
         if request.method == "DELETE" and path.startswith("/tasks/"):
             tid = path.rsplit("/", 1)[1]
             for items in self.tasks.values():
@@ -112,3 +120,20 @@ def test_errors(client, app, fake):
     assert client.get("/todoist/status").status_code == 503
     fake.status = 200
     assert client.get("/todoist/tasks?limit=0").status_code == 400
+
+
+def test_add_task_to_inbox_by_default(client, fake):
+    body = client.post("/todoist/add_task", json={"content": " Купить молоко ", "due": "завтра в 10",
+                                                  "priority": 4, "labels": ["дом"]}).json()
+    assert fake.added[-1] == {"content": "Купить молоко", "priority": 4, "due_string": "завтра в 10",
+                              "due_lang": "ru", "labels": ["дом"]}
+    assert body["task"]["id"] == "n1" and body["task"]["url"] == "https://app.todoist.com/app/task/n1"
+    assert client.get("/todoist/tasks").json()["count"] == 6
+    client.post("/todoist/add_task", json={"content": "отчёт", "project": "p1"})
+    assert fake.added[-1] == {"content": "отчёт", "priority": 1, "project_id": "p1"}
+
+
+def test_add_task_rejects_bad_input(client, fake):
+    assert client.post("/todoist/add_task", json={"content": "  "}).status_code == 400
+    assert client.post("/todoist/add_task", json={"content": "x", "priority": 5}).status_code == 400
+    assert not fake.added

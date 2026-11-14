@@ -1,4 +1,4 @@
-"""`todoist` — задачи Todoist. Чтение и запись (удаление).
+"""`todoist` — задачи Todoist. Чтение и запись (добавление, удаление).
 
 Перенесено из хаба (`~/SecondBrain-new/server/collectors/todoist.py`): API v1, Bearer-токен,
 «Входящие» — проект с `inbox_project`, уже удалённая задача — не ошибка. Отличия:
@@ -32,7 +32,7 @@ todoist = Provider(
     "Todoist",
     writes=True,
     instructions=(
-        "Todoist пользователя: проекты, задачи проекта (по умолчанию — «Входящие») и удаление задачи. "
+        "Todoist пользователя: проекты, задачи проекта (по умолчанию — «Входящие»), добавление и удаление задачи. "
         "Удаление необратимо — только когда пользователь просил или задача уже разобрана."
     ),
     secrets=[Secret(
@@ -43,11 +43,11 @@ todoist = Provider(
 )
 
 
-def _request(method: str, path: str, params: dict | None = None) -> httpx.Response:
+def _request(method: str, path: str, params: dict | None = None, body: dict | None = None) -> httpx.Response:
     headers = {"Authorization": f"Bearer {todoist.secret()}"}
     try:
         with httpx.Client(base_url=URL, timeout=TIMEOUT, transport=transport) as http:
-            resp = http.request(method, path, params=params, headers=headers)
+            resp = http.request(method, path, params=params, json=body, headers=headers)
     except httpx.TimeoutException as exc:
         raise todoist.down(f"Todoist не ответил за {TIMEOUT} с — попробуй позже") from exc
     except httpx.TransportError as exc:
@@ -127,6 +127,41 @@ def tasks(project: str = "inbox", limit: int = 100) -> dict:
     for task in found:
         task.setdefault("url", f"https://app.todoist.com/app/task/{task.get('id')}")
     return {"project_id": project_id, "count": len(found), "tasks": found}
+
+
+@todoist.action(write=True)
+def add_task(content: str, description: str = "", project: str = "inbox", due: str = "",
+             priority: int = 1, labels: list[str] | None = None) -> dict:
+    """Добавить задачу в Todoist. Возвращает созданную задачу целиком (её id — для удаления).
+
+    content — текст задачи; description — подробности;
+    project — id проекта из `projects` или "inbox" («Входящие», по умолчанию);
+    due — срок словами, как в приложении Todoist: «завтра в 10», «пт», «каждый понедельник»,
+    «2026-11-20»; пусто — без срока;
+    priority — 1 обычная … 4 срочная (в приложении это p4 … p1);
+    labels — метки по имени."""
+    if not content.strip():
+        raise BadRequest("content: пустой")
+    if not 1 <= priority <= 4:
+        raise BadRequest("priority: от 1 (обычная) до 4 (срочная)")
+    body: dict = {"content": content.strip(), "priority": priority}
+    if project.strip().lower() != "inbox":
+        body["project_id"] = project.strip()
+    if description:
+        body["description"] = description
+    if due.strip():
+        body["due_string"] = due.strip()
+        body["due_lang"] = "ru"
+    if labels:
+        body["labels"] = labels
+    resp = _request("POST", "/tasks", body=body)
+    if resp.status_code == 404:
+        raise NotFound(f"в Todoist нет проекта {project}")
+    if resp.status_code >= 400:
+        raise BadRequest(f"Todoist не добавил задачу: {resp.status_code} {resp.text[:200]}")
+    task = resp.json()
+    task.setdefault("url", f"https://app.todoist.com/app/task/{task.get('id')}")
+    return {"ok": True, "task": task}
 
 
 @todoist.action(write=True)
