@@ -154,8 +154,18 @@ def _event(item, me: str) -> dict:
         "uid": str(item.uid or ""),
         "recurrence_id": _when(item.recurrence_id) if item.recurrence_id else "",
         "id": str(item.id or ""),
+        "key": _key(item),
     }
     return event
+
+
+def _key(item) -> str:
+    """The hub's name for one occurrence (`event_key` in its server/api/calendar.py): its agendas
+    hang on it, so it is built exactly the hub's way — the raw Exchange recurrence id, not Moscow time."""
+    uid = str(item.uid or "")
+    if not uid:
+        return ""
+    return f"{uid}|{item.recurrence_id.isoformat() if item.recurrence_id else ''}"
 
 
 def _matches(event: dict, who: str) -> bool:
@@ -231,7 +241,7 @@ def day(date: str | None = None, to: str | None = None, attendee: str = "", limi
     включительно), all_day, location, organizer, attendees (кроме меня; первые 30, всего —
     attendees_total; optional у необязательных), response — мой ответ (accept, tentative, decline,
     noresponsereceived, organizer, unknown), uid + recurrence_id — одно повторение встречи
-    (не меняется при переносе), id. Пустой список — правда свободный день: календарь читается живьём.
+    (не меняется при переносе), id, key — ключ повестки встречи в хабе (`tracker/get_agenda`). Пустой список — правда свободный день: календарь читается живьём.
 
     date — ГГГГ-ММ-ДД, по умолчанию сегодня; to — последний день диапазона (до 62 дней);
     attendee — часть почты или имени участника/организатора, латиницей: имена в Exchange

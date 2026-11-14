@@ -14,6 +14,26 @@
       "type": "http",
       "url": "${MOTOR_URL:-https://motor.gang.su}/calendar",
       "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
+    },
+    "tracker": {
+      "type": "http",
+      "url": "${MOTOR_URL:-https://motor.gang.su}/tracker",
+      "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
+    },
+    "people": {
+      "type": "http",
+      "url": "${MOTOR_URL:-https://motor.gang.su}/people",
+      "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
+    },
+    "inbox": {
+      "type": "http",
+      "url": "${MOTOR_URL:-https://motor.gang.su}/inbox",
+      "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
+    },
+    "triage": {
+      "type": "http",
+      "url": "${MOTOR_URL:-https://motor.gang.su}/triage",
+      "headers": {"Authorization": "Bearer ${MOTOR_TOKEN}"}
     }
   }
 }

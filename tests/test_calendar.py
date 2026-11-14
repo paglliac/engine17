@@ -125,11 +125,12 @@ def test_day_shape(client, app, account):
         "attendees": [{"email": "ivanov@avito.ru", "name": "Иванов Пётр"},
                       {"email": "petrova@avito.ru", "name": "Петрова", "optional": True}],
         "attendees_total": 2, "response": "accept", "uid": "uid-Стендап", "recurrence_id": "",
-        "id": "AAMkСтендап",
+        "id": "AAMkСтендап", "key": "uid-Стендап|",
     }
     vacation = body["events"][0]
     assert (vacation["start"], vacation["end"], vacation["all_day"]) == ("2026-11-05", "2026-11-07", True)
     assert body["events"][2]["recurrence_id"] == "2026-11-06T16:00+03:00"
+    assert body["events"][2]["key"] == "uid-1-1 с Сидоровым|2026-11-06T13:00:00+00:00"  # the hub's form
     # Whole Moscow days, and only the fields we show.
     assert account.views == [(at(0), at(0, day=TODAY + datetime.timedelta(days=1)))]
     assert "body" not in account.fields and "required_attendees" in account.fields

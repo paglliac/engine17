@@ -1,5 +1,5 @@
 {
   "name": "motor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Поставщики мотора motor.gang.su как MCP-серверы. Токен — MOTOR_TOKEN в окружении (страничка motor.gang.su → «новый потребитель»)."
 }
