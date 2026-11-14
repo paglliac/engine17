@@ -98,8 +98,8 @@ def test_status_and_projects(client):
 def test_delete_is_a_write_and_gone_is_fine(client, fake):
     assert client.get("/todoist/delete_task?id=t1").status_code == 405
     assert not [c for c in fake.calls if c[0] == "DELETE"]
-    assert client.post("/todoist/delete_task", json={"id": "t1"}).json() == {"ok": True, "id": "t1", "existed": True}
-    assert client.post("/todoist/delete_task", json={"id": "t1"}).json()["existed"] is False
+    assert client.post("/todoist/delete_task", json={"id": "t1"}).json() == {"ok": True, "id": "t1"}
+    assert client.post("/todoist/delete_task", json={"id": "t1"}).status_code == 200  # gone already: fine
     assert [t["id"] for t in fake.tasks["p0"]] == ["t0", "t2", "t3", "t4"]
 
 

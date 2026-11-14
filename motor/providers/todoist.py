@@ -1,7 +1,7 @@
 """`todoist` — задачи Todoist. Чтение и запись (удаление).
 
 Перенесено из хаба (`~/SecondBrain-new/server/collectors/todoist.py`): API v1, Bearer-токен,
-«Входящие» — проект с `inbox_project`, удалённая до нас задача (404) — не ошибка. Отличия:
+«Входящие» — проект с `inbox_project`, уже удалённая задача — не ошибка. Отличия:
 листание `next_cursor` до `limit` (хаб брал только первую страницу), ошибки — ошибки мотора.
 Задачи отдаются как их отдаёт Todoist: хабу (Х10) нужен весь объект — он кладёт его в источник.
 """
@@ -131,16 +131,14 @@ def tasks(project: str = "inbox", limit: int = 100) -> dict:
 
 @todoist.action(write=True)
 def delete_task(id: str) -> dict:
-    """Удалить задачу Todoist насовсем (не «выполнить»). Задача, которой уже нет, — не ошибка:
-    existed: false.
+    """Удалить задачу Todoist насовсем (не «выполнить»). Задача, которой уже нет, — не ошибка
+    (Todoist и на повторное удаление отвечает «успешно», так что «была ли» не узнать).
 
     id — id задачи из `tasks`."""
     task_id = id.strip()
     if not task_id:
         raise BadRequest("id: пустой")
     resp = _request("DELETE", f"/tasks/{quote(task_id, safe='')}")
-    if resp.status_code == 404:
-        return {"ok": True, "id": task_id, "existed": False}
-    if resp.status_code >= 400:
+    if resp.status_code >= 400 and resp.status_code != 404:
         raise BadRequest(f"Todoist не удалил задачу {task_id}: {resp.status_code} {resp.text[:200]}")
-    return {"ok": True, "id": task_id, "existed": True}
+    return {"ok": True, "id": task_id}
